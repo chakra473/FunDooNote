@@ -1,44 +1,46 @@
 import json
 
 from django.http import HttpResponse, JsonResponse
-
-from user.models import User
+from django.contrib.auth import authenticate
+from user.models import UserAuth
 
 
 def index(request):
     return HttpResponse("Hello, world. You're at the user app index.")
 
 
-def register_view(request):
+def user_register(request):
     if request.method == "POST":
+        data = json.loads(request.body)
         try:
-            data = json.loads(request.body)
-            # #user = User.objects.create(user_name=data.get("user_name"), password=data.get("password"),
-            #                            first_name=data.get("first_name"), last_name=data.get("last_name"),
-            #                            email=data.get("email"))
-            user = User(user_name=data.get("user_name"), password=data.get("password"),
-                        first_name=data.get("first_name"), last_name=data.get("last_name"),
-                        email=data.get("email"))
-            print(user)
-            user.save()
-            return JsonResponse({"message": f"user {user.user_name} added successfully"})
-        except Exception:
-            return JsonResponse({"message": f"username {user.user_name} already exists"})
+
+            user = UserAuth.objects.create_user(username=data.get("username"), password=data.get("password"),
+                                                first_name=data.get("first_name"), last_name=data.get("last_name"),
+                                                email=data.get("email"), address=data.get("address"),
+                                                phone_number=data.get("phone_number"))
+            # user = User(user_name=data.get("user_name"), password=data.get("password"),
+            #             first_name=data.get("first_name"), last_name=data.get("last_name"),
+            #             email=data.get("email")
+            # user.save()
+            return JsonResponse({"message": f"user {user.username} added successfully"})
+        except Exception as err:
+            print(err)
+            return JsonResponse({"message": f"username {data.get('username')} already exists"}, status=400)
 
     return JsonResponse({"message": "method not allowed"})
 
 
-def login_view(request):
+def user_login(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            print(data)
-            user = User.objects.filter(user_name=data.get("user_name"), password=data.get("password"))
-            print(user)
-            # if user is None:
-            #     return JsonResponse({"message": "incorrect username/password"})
-            return JsonResponse({"message": f"login is successful {user.first().user_name}"})
+            user = authenticate(username=data.get("username"), password=data.get("password"))
+            if user is not None:
+                # A backend authenticated the credentials
+                return JsonResponse({"message": f"login is successful {user.username}"})
+            else:
+                # No backend authenticated the credentials
+                return JsonResponse({"message": "incorrect username/password"})
         except Exception as err:
-            print(err)
-            return JsonResponse({"message": "incorrect username/password"})
+            return JsonResponse({"message": str(err)})
     return JsonResponse({"message": "method not allowed"})
